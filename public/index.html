@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rigor Interview — AI Interview Coach</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <!-- SEO & Social -->
+  <meta name="description" content="Practice role-specific interview questions with real-time AI feedback and STAR method coaching." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://rigor.design/interview" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://rigor.design/interview" />
+  <meta property="og:title" content="Rigor Interview — AI Interview Coach" />
+  <meta property="og:description" content="Practice role-specific interview questions with real-time AI feedback and STAR method coaching." />
+  <meta property="og:image" content="https://rigor.design/og-image.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Rigor Interview — AI Interview Coach" />
+  <meta name="twitter:description" content="Practice role-specific interview questions with real-time AI feedback and STAR method coaching." />
+  <meta name="twitter:image" content="https://rigor.design/og-image.png" />
+
+  <!-- Theme color -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1E3A5F" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+    <nav class="nav" aria-label="Main navigation">
+    <a href="/" class="nav-brand">rigor<span>.</span>design</a>
+    <div class="nav-links"><span class="plan-badge hidden" id="plan-badge"></span><a href="#" id="nav-login" class="nav-link">Sign In</a><button class="btn-upgrade-nav" id="nav-upgrade" class="btn-upgrade-nav nav-upgrade-hidden">⚡ Upgrade</button><button class="btn-icon" id="nav-manage" class="btn-icon nav-manage-hidden">Manage Plan</button><a href="#" id="nav-signup" class="btn-nav">Get Started</a></div>
+  </nav>
+  <div class="modal-overlay hidden" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+    <div class="modal">
+      <button class="modal-close" id="modal-close" aria-label="Close dialog">&times;</button>
+      <div class="modal-tabs"><button class="tab-btn active" data-tab="login">Sign In</button><button class="tab-btn" data-tab="signup">Sign Up</button></div>
+      <div class="tab-content" id="tab-login"><input type="email" class="input" id="login-email" placeholder="Email"/><input type="password" class="input" id="login-password" placeholder="Password"/><button class="btn-primary full" id="btn-login" aria-label="Sign in to your account">Sign In</button></div>
+      <div class="tab-content hidden" id="tab-signup"><input type="text" class="input" id="signup-name" placeholder="Full Name"/><input type="email" class="input" id="signup-email" placeholder="Email"/><input type="password" class="input" id="signup-password" placeholder="Password"/><button class="btn-primary full" id="btn-signup" aria-label="Create a new account">Create Account</button></div>
+      <p class="auth-error hidden" id="auth-error"></p>
+    </div>
+  </div>
+
+  <section class="hero" id="main-content">
+    <div class="hero-badge">AI Interview Coach</div>
+    <h1 class="hero-title">Practice Interviews.<br/><em>Land the Offer.</em></h1>
+    <p class="hero-sub">Get role-specific questions, real-time feedback on your answers, and coaching tips — all powered by AI.</p>
+  </section>
+
+  <section class="tool-section" aria-label="Main tool"><div id="usage-meter-container"></div>
+    <div class="tool-container">
+      <!-- Setup -->
+      <div class="setup-panel" id="setup-panel">
+        <div class="tool-panel">
+          <div class="panel-header"><span class="panel-num">01</span><h2>Your Details</h2></div>
+          <input type="text" class="input" id="target-role" placeholder="Target role (e.g. Software Engineer)"/>
+          <input type="text" class="u-rigor_interview-1 input" id="company" placeholder="Company name"/>
+          <select class="u-rigor_interview-2 input" id="interview-type">
+            <option value="behavioral">Behavioral</option>
+            <option value="technical">Technical</option>
+            <option value="case">Case Study</option>
+            <option value="mixed">Mixed</option>
+          </select>
+          <textarea class="u-rigor_interview-3 input textarea" id="resume-snippet" placeholder="Paste resume highlights (optional)..."></textarea>
+        </div>
+        <div class="tool-actions">
+          <button class="btn-primary large" id="btn-start">Start Interview Practice</button>
+        </div>
+      </div>
+
+      <!-- Interview Session -->
+      <div class="interview-session hidden" id="interview-session">
+        <div class="session-header">
+          <div class="session-info">
+            <span id="question-counter">Question 1 of 10</span>
+            <div class="progress-bar"><div class="u-rigor_interview-4 progress-fill" id="progress-fill"></div></div>
+          </div>
+          <button class="btn-secondary small" id="btn-end-session">End Session</button>
+        </div>
+
+        <div class="question-card" id="question-card">
+          <div class="q-type-badge" id="q-type-badge">Behavioral</div>
+          <p class="question-text" id="question-text">Loading question...</p>
+          <div class="question-tip" id="question-tip"></div>
+        </div>
+
+        <div class="answer-panel">
+          <div class="answer-toolbar">
+            <span>Your Answer</span>
+            <span class="word-count" id="word-count">0 words</span>
+          </div>
+          <textarea class="input textarea tall" id="answer-input" placeholder="Type your answer here. Use the STAR method: Situation, Task, Action, Result..."></textarea>
+          <div class="answer-actions">
+            <button class="btn-primary" id="btn-get-feedback"><span class="btn-text">Get Feedback</span><span class="btn-loader hidden">Analyzing...</span></button>
+            <button class="btn-secondary" id="btn-skip">Skip Question</button>
+          </div>
+        </div>
+
+        <div class="feedback-panel hidden" id="feedback-panel">
+          <div class="feedback-score-row">
+            <div class="feedback-score" id="feedback-score">0</div>
+            <div><strong id="feedback-verdict">Good answer</strong><p id="feedback-summary"></p></div>
+          </div>
+          <div class="feedback-sections">
+            <div class="feedback-block positive"><h5>✓ What worked</h5><p id="feedback-positive"></p></div>
+            <div class="feedback-block improve"><h5>↑ Improve this</h5><p id="feedback-improve"></p></div>
+            <div class="feedback-block example"><h5>💡 Sample answer</h5><p id="feedback-example"></p></div>
+          </div>
+          <button class="btn-primary" id="btn-next-question">Next Question →</button>
+        </div>
+      </div>
+
+      <!-- Session Complete -->
+      <div class="session-complete hidden" id="session-complete">
+        <div class="complete-card">
+          <div class="complete-icon">🎯</div>
+          <h2>Session Complete!</h2>
+          <div class="final-score" id="final-score">72</div>
+          <p>Average score across all answers</p>
+          <div class="score-breakdown" id="score-breakdown"></div>
+          <button class="btn-primary" id="btn-new-session">New Session</button>
+          <button class="btn-secondary" id="btn-save-session">Save Results</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer"><p>© 2025 rigor.design</p></footer>
+  <script type="module" src="js/app.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
