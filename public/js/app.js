@@ -1,140 +1,236 @@
-import { initPaywall, gate, showPricingModal, renderUsageMeter } from "./services/paywallUI.js";
-import { saveDoc, getUserDocs, tsToString } from "./services/firestoreService.js";
+import { initPaywall, showPricingModal, renderUsageMeter } from "./services/paywallUI.js";
+import { saveDoc } from "./services/firestoreService.js";
 import { apiFetch } from "./config/env.js";
 import { toast } from "./utils/toast.js";
-import { initAuthModal } from "./utils/helpers.js";
+import {
+  initAuthModal, wireAuthNav, openAuthModal, escapeHtml,
+  showToolError, clearToolError
+} from "./utils/helpers.js";
 import { authService } from "./services/authService.js";
+
+// Answer length cap (client-side). The feedback API forwards the full answer to
+// the model, so keep requests bounded. Resume highlights are cut to 500 chars by
+// api/interview/questions.js, so the input enforces the same limit.
+const ANSWER_MAX = 4000;
 
 let currentUser = null;
 let questions = [];
 let currentQ = 0;
-let scores = [];
+// One entry per question: a number (0-100) once scored, "skipped", or undefined.
+let results = [];
+
+const $id = id => document.getElementById(id);
 
 authService.onAuthChanged(async user => {
   currentUser = user;
-  const navLoginEl = document.getElementById("nav-login");
+  const navLoginEl = $id("nav-login");
   if (navLoginEl) navLoginEl.textContent = user ? "Sign Out" : "Sign In";
-  document.getElementById("nav-signup")?.classList.toggle("nav-signup-hidden", !!user);
-  await initPaywall(user ? user.uid : null);
-  if (user) renderUsageMeter("usage-meter-container", "uses");
-});
-document.getElementById("nav-upgrade")?.addEventListener("click", () => showPricingModal("pro"));
-document.getElementById("nav-manage")?.addEventListener("click", () => showPricingModal("pro"));
-
-// Auth modal
-initAuthModal(authService);
-
-// Word counter
-document.getElementById("answer-input").addEventListener("input", () => {
-  const words = document.getElementById("answer-input").value.trim().split(/\s+/).filter(Boolean).length;
-  document.getElementById("word-count").textContent = `${words} words`;
-});
-
-// Start session
-document.getElementById("btn-start").addEventListener("click", async () => {
-  const role = document.getElementById("target-role").value.trim();
-  if (!role) return toast.warning("Please enter your target role.");
-  document.getElementById("btn-start").textContent = "Loading Questions...";
-  document.getElementById("btn-start").disabled = true;
+  $id("nav-signup")?.classList.toggle("nav-signup-hidden", !!user);
   try {
-    const res = await apiFetch("/api/interview-questions", { role, company: document.getElementById("company").value, type: document.getElementById("interview-type").value, resume: document.getElementById("resume-snippet").value });
-    const data = await res.json();
-    questions = data.questions || generateFallbackQuestions(role);
-    currentQ = 0; scores = [];
-    document.getElementById("setup-panel").style.display = "none";
-    document.getElementById("interview-session").classList.remove("hidden");
-    renderQuestion();
-  } catch(e) {
-    questions = generateFallbackQuestions(role);
-    currentQ = 0; scores = [];
-    document.getElementById("setup-panel").style.display = "none";
-    document.getElementById("interview-session").classList.remove("hidden");
-    renderQuestion();
-  } finally {
-    document.getElementById("btn-start").textContent = "Start Interview Practice";
-    document.getElementById("btn-start").disabled = false;
+    await initPaywall(user ? user.uid : null);
+    if (user) renderUsageMeter("usage-meter-container", "uses")?.catch?.(() => {});
+  } catch (e) {
+    console.warn("[paywall] init failed:", e?.message);
   }
 });
+$id("nav-upgrade")?.addEventListener("click", () => showPricingModal("pro"));
+$id("nav-manage")?.addEventListener("click", () => showPricingModal("pro"));
 
-function generateFallbackQuestions(role) {
-  return [
-    { text: `Tell me about yourself and why you're interested in this ${role} role.`, type: "Behavioral", tip: "Keep it to 2 minutes. Focus on your career arc." },
-    { text: "Describe a challenge you faced at work and how you overcame it.", type: "Behavioral", tip: "Use the STAR method: Situation, Task, Action, Result." },
-    { text: "What's your greatest professional achievement?", type: "Behavioral", tip: "Quantify the impact where possible." },
-    { text: "Where do you see yourself in 5 years?", type: "Behavioral", tip: "Align with company growth and the role." },
-    { text: "Why are you leaving your current position?", type: "Behavioral", tip: "Stay positive. Focus on growth opportunities." },
-    { text: "Describe a time you had to work with a difficult team member.", type: "Behavioral", tip: "Show empathy and conflict resolution skills." },
-    { text: "How do you prioritize when you have multiple deadlines?", type: "Behavioral", tip: "Demonstrate organization and communication." },
-    { text: "Tell me about a time you failed. What did you learn?", type: "Behavioral", tip: "Own the failure, show growth mindset." },
-    { text: "What are your greatest strengths and weaknesses?", type: "Behavioral", tip: "For weaknesses, show what you're doing to improve." },
-    { text: "Do you have any questions for us?", type: "Behavioral", tip: "Always have 2-3 thoughtful questions prepared." }
-  ];
+// Auth modal + nav "Sign In" / "Get Started" (previously never wired on this page)
+initAuthModal(authService);
+wireAuthNav(authService, () => currentUser);
+
+// Word / character counter
+const answerInput = $id("answer-input");
+answerInput.setAttribute("maxlength", String(ANSWER_MAX));
+function updateWordCount() {
+  const v = answerInput.value;
+  const words = v.trim().split(/\s+/).filter(Boolean).length;
+  const near = v.length > ANSWER_MAX * 0.9;
+  $id("word-count").textContent = near
+    ? `${words} words · ${v.length.toLocaleString()} / ${ANSWER_MAX.toLocaleString()} characters`
+    : `${words} words`;
 }
+answerInput.addEventListener("input", updateWordCount);
+
+// ─── Start session ────────────────────────────────────────────────────────────
+function setStartBusy(busy) {
+  const btn = $id("btn-start");
+  btn.textContent = busy ? "Loading Questions..." : "Start Interview Practice";
+  btn.disabled = busy;
+}
+
+async function startSession() {
+  const role = $id("target-role").value.trim();
+  if (!role) { $id("target-role").focus(); return toast.warning("Please enter your target role."); }
+
+  // The question and feedback APIs require a signed-in user (requireAuth).
+  if (!currentUser) {
+    toast.info("Sign in or create a free account to start a practice session.");
+    openAuthModal("login");
+    return;
+  }
+
+  clearToolError();
+  setStartBusy(true);
+  try {
+    const data = await apiFetch("/api/interview-questions", {
+      role,
+      company: $id("company").value.trim(),
+      type: $id("interview-type").value,
+      resume: $id("resume-snippet").value.trim()
+    });
+    const qs = Array.isArray(data?.questions)
+      ? data.questions.filter(q => q && typeof q.text === "string" && q.text.trim())
+      : [];
+    // No silent generic fallback: if the AI didn't return questions, say so.
+    if (!qs.length) throw new Error("The server didn't return any interview questions. Please try again.");
+    questions = qs;
+    currentQ = 0;
+    results = [];
+    $id("setup-panel").style.display = "none";
+    $id("session-complete").classList.add("hidden");
+    $id("interview-session").classList.remove("hidden");
+    renderQuestion();
+  } catch (e) {
+    showToolError(e, startSession);
+  } finally {
+    setStartBusy(false);
+  }
+}
+$id("btn-start").addEventListener("click", startSession);
 
 function renderQuestion() {
   const q = questions[currentQ];
-  document.getElementById("question-text").textContent = q.text;
-  document.getElementById("q-type-badge").textContent = q.type || "Behavioral";
-  document.getElementById("question-tip").textContent = q.tip ? `💡 Tip: ${q.tip}` : "";
-  document.getElementById("question-counter").textContent = `Question ${currentQ+1} of ${questions.length}`;
-  document.getElementById("progress-fill").style.width = `${((currentQ+1)/questions.length)*100}%`;
-  document.getElementById("answer-input").value = "";
-  document.getElementById("word-count").textContent = "0 words";
-  document.getElementById("feedback-panel").classList.add("hidden");
+  $id("question-text").textContent = q.text;
+  $id("q-type-badge").textContent = q.type || "Question";
+  $id("question-tip").textContent = q.tip ? `💡 Tip: ${q.tip}` : "";
+  $id("question-counter").textContent = `Question ${currentQ + 1} of ${questions.length}`;
+  $id("progress-fill").style.width = `${((currentQ + 1) / questions.length) * 100}%`;
+  answerInput.value = "";
+  updateWordCount();
+  $id("feedback-panel").classList.add("hidden");
 }
 
-document.getElementById("btn-get-feedback").addEventListener("click", async () => {
-  const answer = document.getElementById("answer-input").value.trim();
-  if (!answer) return toast.warning("Please write an answer first.");
-  document.querySelector(".btn-text").classList.add("hidden"); document.querySelector(".btn-loader").classList.remove("hidden"); document.getElementById("btn-get-feedback").disabled=true;
-  try {
-    const res = await apiFetch("/api/interview-feedback", { question: questions[currentQ].text, answer, role: document.getElementById("target-role").value });
-    const data = await res.json();
-    const score = data.score || Math.floor(Math.random()*30)+60;
-    scores.push(score);
-    document.getElementById("feedback-score").textContent = score;
-    document.getElementById("feedback-verdict").textContent = score >= 80 ? "Strong Answer" : score >= 65 ? "Good Answer" : "Needs Work";
-    document.getElementById("feedback-summary").textContent = data.summary || "Good use of the STAR method. Clear and concise.";
-    document.getElementById("feedback-positive").textContent = data.positive || "You clearly articulated the situation and your role in it.";
-    document.getElementById("feedback-improve").textContent = data.improve || "Add specific metrics to quantify your impact.";
-    document.getElementById("feedback-example").textContent = data.example || "Consider opening with the result first, then explaining how you got there.";
-    document.getElementById("feedback-panel").classList.remove("hidden");
-    document.getElementById("feedback-panel").scrollIntoView({behavior:"smooth"});
-  } catch(e) { toast.error("Feedback failed: "); }
-  finally { document.querySelector(".btn-text").classList.remove("hidden"); document.querySelector(".btn-loader").classList.add("hidden"); document.getElementById("btn-get-feedback").disabled=false; }
-});
+function scrollToQuestion() {
+  $id("question-card").scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
-document.getElementById("btn-next-question").addEventListener("click", () => {
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+function setFeedbackBusy(busy) {
+  const btn = $id("btn-get-feedback");
+  btn.querySelector(".btn-text").classList.toggle("hidden", busy);
+  btn.querySelector(".btn-loader").classList.toggle("hidden", !busy);
+  btn.disabled = busy;
+  $id("btn-skip").disabled = busy;
+}
+
+async function getFeedback() {
+  const answer = answerInput.value.trim();
+  if (!answer) { answerInput.focus(); return toast.warning("Please write an answer first."); }
+  setFeedbackBusy(true);
+  try {
+    const data = await apiFetch("/api/interview-feedback", {
+      question: questions[currentQ].text,
+      answer: answer.slice(0, ANSWER_MAX),
+      role: $id("target-role").value.trim()
+    });
+    const raw = Number(data?.score);
+    // No random/canned fallback: a result without a score is an error.
+    if (!Number.isFinite(raw)) throw new Error("The feedback service returned an incomplete result (no score). Please try again.");
+    const score = Math.max(0, Math.min(100, Math.round(raw)));
+    results[currentQ] = score;
+    $id("feedback-score").textContent = score;
+    $id("feedback-verdict").textContent = score >= 80 ? "Strong Answer" : score >= 65 ? "Good Answer" : "Needs Work";
+    $id("feedback-summary").textContent = data.summary || "";
+    $id("feedback-positive").textContent = data.positive || "—";
+    $id("feedback-improve").textContent = data.improve || "—";
+    $id("feedback-example").textContent = data.example || "—";
+    $id("feedback-panel").classList.remove("hidden");
+    $id("feedback-panel").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    toast.error(`Feedback failed: ${e?.status === 401 ? "please sign in again." : (e?.message || "unknown error")}`);
+  } finally {
+    setFeedbackBusy(false);
+  }
+}
+$id("btn-get-feedback").addEventListener("click", getFeedback);
+
+// ─── Navigation between questions ─────────────────────────────────────────────
+function scoredResults() {
+  return results.filter(r => typeof r === "number");
+}
+
+function averageScore() {
+  const s = scoredResults();
+  return s.length ? Math.round(s.reduce((a, b) => a + b, 0) / s.length) : null;
+}
+
+function finishSession() {
+  $id("interview-session").classList.add("hidden");
+  const avg = averageScore();
+  $id("final-score").textContent = avg === null ? "–" : avg;
+  const skipped = results.filter(r => r === "skipped").length;
+  $id("final-score-note").textContent = avg === null
+    ? "No answers were scored in this session."
+    : `Average across ${scoredResults().length} scored answer${scoredResults().length === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped, not counted)` : ""}`;
+  $id("score-breakdown").innerHTML = questions.map((q, i) => {
+    const r = results[i];
+    const label = typeof r === "number" ? `${r}/100` : r === "skipped" ? "Skipped" : "Not answered";
+    const cls = typeof r === "number" ? (r >= 80 ? "bd-strong" : r >= 65 ? "bd-good" : "bd-weak") : "bd-none";
+    return `<div class="breakdown-row"><span>Q${i + 1}</span><span class="breakdown-val ${cls}">${escapeHtml(label)}</span></div>`;
+  }).join("");
+  $id("session-complete").classList.remove("hidden");
+  $id("session-complete").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function nextQuestion() {
   currentQ++;
   if (currentQ >= questions.length) {
-    document.getElementById("interview-session").classList.add("hidden");
-    const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-    document.getElementById("final-score").textContent = avg;
-    document.getElementById("score-breakdown").innerHTML = scores.map((s,i)=>`<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--gray-100)"><span>Q${i+1}</span><span style="font-weight:600;color:${s>=80?'#166534':s>=65?'var(--navy)':'#9A3412'}">${s}/100</span></div>`).join("");
-    document.getElementById("session-complete").classList.remove("hidden");
+    finishSession();
   } else {
     renderQuestion();
+    scrollToQuestion();
+  }
+}
+$id("btn-next-question").addEventListener("click", nextQuestion);
+
+$id("btn-skip").addEventListener("click", () => {
+  if (typeof results[currentQ] !== "number") results[currentQ] = "skipped";
+  nextQuestion();
+});
+
+$id("btn-end-session").addEventListener("click", () => {
+  if (!confirm("End this session? You'll see a summary of the questions answered so far.")) return;
+  finishSession();
+});
+
+$id("btn-new-session").addEventListener("click", () => {
+  $id("session-complete").classList.add("hidden");
+  $id("setup-panel").style.display = "";
+  $id("setup-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$id("btn-save-session")?.addEventListener("click", async () => {
+  if (!currentUser) { openAuthModal("login"); return; }
+  try {
+    await saveDoc("interview-sessions", currentUser.uid, {
+      role: $id("target-role").value.trim(),
+      type: $id("interview-type").value,
+      questions: questions.map(q => q.text),
+      scores: questions.map((_, i) => (typeof results[i] === "number" ? results[i] : null)),
+      skipped: results.filter(r => r === "skipped").length,
+      avgScore: averageScore()
+    });
+    toast.success("Session saved!");
+  } catch (e) {
+    toast.error(`Couldn't save: ${e?.message || "unknown error"}`);
   }
 });
 
-document.getElementById("btn-skip").addEventListener("click", () => {
-  scores.push(0);
-  currentQ++;
-  if (currentQ >= questions.length) { document.getElementById("btn-next-question").click(); } else { renderQuestion(); }
-});
-
-document.getElementById("btn-end-session").addEventListener("click", () => {
-  if(confirm("End this session?")) { document.getElementById("interview-session").classList.add("hidden"); document.getElementById("setup-panel").style.display=""; }
-});
-
-document.getElementById("btn-new-session").addEventListener("click", () => {
-  document.getElementById("session-complete").classList.add("hidden");
-  document.getElementById("setup-panel").style.display = "";
-});
-
-document.getElementById("btn-save-session")?.addEventListener("click", async () => {
-  if(!currentUser) { authModal.classList.remove("hidden"); return; }
-  
-  await saveDoc("interview-sessions", currentUser?.uid || '', { userId: currentUser.uid, role: document.getElementById("target-role").value, scores, avgScore: Math.round(scores.reduce((a,b)=>a+b,0)/scores.length), createdAt: serverTimestamp() });
-  toast.success("Session saved!");
-});
+// ─── Service worker (moved from an inline <script> so a strict CSP doesn't block it) ──
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
