@@ -28,7 +28,7 @@ authService.onAuthChanged(async user => {
   $id("nav-signup")?.classList.toggle("nav-signup-hidden", !!user);
   try {
     await initPaywall(user ? user.uid : null);
-    if (user) renderUsageMeter("usage-meter-container", "uses")?.catch?.(() => {});
+    if (user) renderUsageMeter("usage-meter-container", "analyses")?.catch?.(() => {});
   } catch (e) {
     console.warn("[paywall] init failed:", e?.message);
   }
