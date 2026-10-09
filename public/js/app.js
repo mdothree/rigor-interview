@@ -2,6 +2,7 @@ import { initPaywall, showPricingModal, renderUsageMeter } from "./services/payw
 import { saveDoc } from "./services/firestoreService.js";
 import { apiFetch } from "./config/env.js";
 import { toast } from "./utils/toast.js";
+import { validators, guardSubmit } from "./utils/validate.js";
 import {
   initAuthModal, wireAuthNav, openAuthModal, escapeHtml,
   showToolError, clearToolError
@@ -33,7 +34,7 @@ authService.onAuthChanged(async user => {
     console.warn("[paywall] init failed:", e?.message);
   }
 });
-$id("nav-upgrade")?.addEventListener("click", () => showPricingModal("pro"));
+$id("nav-upgrade")?.addEventListener("click", (e) => { e.preventDefault(); showPricingModal("pro"); });
 $id("nav-manage")?.addEventListener("click", () => showPricingModal("pro"));
 
 // Auth modal + nav "Sign In" / "Get Started" (previously never wired on this page)
@@ -62,7 +63,7 @@ function setStartBusy(busy) {
 
 async function startSession() {
   const role = $id("target-role").value.trim();
-  if (!role) { $id("target-role").focus(); return toast.warning("Please enter your target role."); }
+  if (!guardSubmit([{ id: "target-role", rules: [validators.required, validators.minLength(2)], label: "Target role" }], toast)) return;
 
   // The question and feedback APIs require a signed-in user (requireAuth).
   if (!currentUser) {
@@ -127,7 +128,7 @@ function setFeedbackBusy(busy) {
 
 async function getFeedback() {
   const answer = answerInput.value.trim();
-  if (!answer) { answerInput.focus(); return toast.warning("Please write an answer first."); }
+  if (!guardSubmit([{ id: "answer-input", rules: [validators.required, validators.minWords(5)], label: "Your answer" }], toast)) return;
   setFeedbackBusy(true);
   try {
     const data = await apiFetch("/api/interview-feedback", {
