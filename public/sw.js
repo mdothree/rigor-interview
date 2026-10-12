@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "rigor-interview-v5"; // bumped: cache-first SW must drop pre-gate HTML/JS (RIGOR-PAY-BEFORE-API)
+const CACHE_NAME = "rigor-interview-v6"; // bumped: cache-first SW must pick up the #94 paid-from-first-use paywall JS
 const STATIC_ASSETS = [
   "/",
   "/index.html",

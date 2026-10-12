@@ -1,4 +1,4 @@
-import { initPaywall, showPricingModal, renderUsageMeter } from "./services/paywallUI.js";
+import { initPaywall, requirePro, showPricingModal, renderUsageMeter } from "./services/paywallUI.js";
 import { saveDoc } from "./services/firestoreService.js";
 import { apiFetch } from "./config/env.js";
 import { toast } from "./utils/toast.js";
@@ -72,6 +72,8 @@ async function startSession() {
     return;
   }
 
+  // #94: paid from first use (opens the pricing modal when not subscribed).
+  if (!(await requirePro("analyses"))) return;
   clearToolError();
   setStartBusy(true);
   try {
@@ -129,6 +131,8 @@ function setFeedbackBusy(busy) {
 async function getFeedback() {
   const answer = answerInput.value.trim();
   if (!guardSubmit([{ id: "answer-input", rules: [validators.required, validators.minWords(5)], label: "Your answer" }], toast)) return;
+  // #94: paid from first use (opens the pricing modal when not subscribed).
+  if (!(await requirePro("interviewFeedback"))) return;
   setFeedbackBusy(true);
   try {
     const data = await apiFetch("/api/interview-feedback", {
