@@ -67,7 +67,7 @@ async function startSession() {
 
   // The question and feedback APIs require a signed-in user (requireAuth).
   if (!currentUser) {
-    toast.info("Sign in or create a free account to start a practice session.");
+    toast.info("Sign in or create an account to start a practice session.");
     openAuthModal("login");
     return;
   }
