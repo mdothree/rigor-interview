@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "rigor-interview-v7"; // bumped: Q7 paid path (checkout on, /success confirms access)
+const CACHE_NAME = "rigor-interview-v8"; // bumped: cache-first SW must pick up the VISUAL-QA dark-theme CSS
 const STATIC_ASSETS = [
   "/",
   "/index.html",
