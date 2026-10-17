@@ -7,7 +7,7 @@
 <meta name="keywords" content="interview practice, AI interview coach, mock interview, STAR method, interview questions, interview prep">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://interview.rigor.design/">
-<meta name="theme-color" content="#1E3A5F">
+<meta name="theme-color" content="#0E0D0C">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Rigor">
 <meta property="og:title" content="AI Interview Coach — Rigor">
@@ -30,15 +30,16 @@
 <link rel="manifest" href="/site.webmanifest">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Rigor Interview","url":"https://interview.rigor.design/","description":"Practice role-specific interview questions with Rigor Interview. Get AI feedback on your answers and coaching on the STAR method before the real thing.","applicationCategory":"BusinessApplication","operatingSystem":"Web","image":"https://interview.rigor.design/og-image.png","publisher":{"@type":"Organization","name":"Rigor","url":"https://rigor.design/","logo":"https://rigor.design/icon-512.png","parentOrganization":{"@type":"Organization","name":"MDO3D","url":"https://mdo3d.com/"}}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script src="/js/theme-init.js"></script><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/styles.css?v=20261015"/><link rel="stylesheet" href="/css/theme-toggle.css?v=20261015" />
+  <script src="/js/theme-init.js"></script><link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=EB+Garamond:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css?v=20261017"/><link rel="stylesheet" href="/css/theme-toggle.css?v=20261017" />
+  <link rel="stylesheet" href="css/rigor-brand.css?v=20261017" />
 
   <script src="/js/consent.js" defer></script>
 </head>
-<body>
+<body class="rg">
   <a href="#main-content" class="skip-link">Skip to main content</a>
     <nav class="nav" aria-label="Main navigation">
-    <a href="/" class="nav-brand">rigor<span>.</span>design</a>
+    <a href="https://rigor.design" class="nav-brand"><span class="brand-mark" aria-hidden="true">R</span>Rigor <span class="nav-sub">Interview Coach</span></a>
     <div class="nav-links"><span class="plan-badge hidden" id="plan-badge"></span><a href="#signin" id="nav-login" class="nav-link">Sign In</a><button type="button" class="btn-upgrade-nav" id="nav-upgrade" data-pro-label="⚡ Upgrade to Pro - $10/mo">Pro — coming soon</button><button class="btn-icon nav-manage-hidden" id="nav-manage">Manage Plan</button><a href="#signup" id="nav-signup" class="btn-nav">Get Started</a><button type="button" class="mdo-theme" data-mdo-theme aria-label="Switch theme" title="Switch theme"><svg class="mdo-i mdo-i-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="mdo-i mdo-i-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
   </nav>
   <div class="modal-overlay hidden" id="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in or create an account">
@@ -53,7 +54,7 @@
 
   <main id="main-content">
   <section class="hero">
-    <div class="hero-badge">AI Interview Coach</div>
+    <div class="hero-badge">Rigor · Interview Coach · Beta</div>
     <h1 class="hero-title">Practice Interviews.<br/><em>Land the Offer.</em></h1>
     <p class="hero-sub">Get role-specific questions, real-time feedback on your answers, and coaching tips — all powered by AI.</p>
   </section>
@@ -114,9 +115,9 @@
             <div><strong id="feedback-verdict">Good answer</strong><p id="feedback-summary"></p></div>
           </div>
           <div class="feedback-sections">
-            <div class="feedback-block positive"><h5>✓ What worked</h5><p id="feedback-positive"></p></div>
+            <div class="feedback-block positive"><h5>What worked</h5><p id="feedback-positive"></p></div>
             <div class="feedback-block improve"><h5>↑ Improve this</h5><p id="feedback-improve"></p></div>
-            <div class="feedback-block example"><h5>💡 Sample answer</h5><p id="feedback-example"></p></div>
+            <div class="feedback-block example"><h5>Sample answer</h5><p id="feedback-example"></p></div>
           </div>
           <button class="btn-primary" id="btn-next-question">Next Question →</button>
         </div>
@@ -141,8 +142,8 @@
 
   <footer class="footer">
     <nav class="footer-tools" aria-label="Other rigor.design tools"><a href="https://rigor.design">All tools</a> <a href="https://resume.rigor.design">Resume Analyzer</a> <a href="https://cover.rigor.design">Cover Letters</a> <a href="https://linkedin.rigor.design">LinkedIn Optimizer</a> <a href="https://networking.rigor.design">Networking Emails</a> <a href="https://portfolio.rigor.design">Portfolio Review</a> <a href="https://salary.rigor.design">Salary Negotiation</a></nav>
-    <nav class="footer-tools footer-legal" aria-label="Legal"><a href="/privacy">Privacy</a> <a href="/terms">Terms</a> <a href="/refund">Refunds</a> <a href="/contact">Contact</a></nav>
-    <p>© 2026 rigor.design</p>
+    <nav class="footer-legal" aria-label="Legal and contact"><a href="https://mdo3d.com/privacy">Privacy</a> <a href="https://mdo3d.com/terms">Terms</a> <a href="https://mdo3d.com/refund">Refunds</a> <a href="https://mdo3d.com/contact">Contact</a></nav>
+    <p>© 2026 Rigor · part of MDO3D</p>
   </footer>
 
     <script src="js/app.js" type="module"></script>
